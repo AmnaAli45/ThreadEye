@@ -25,7 +25,7 @@ from pathlib import Path
 import cv2
 
 # ------------------------------------------------------------- Paths ---------------------------------------------------------------------
-ROOT = Path(__file__).resolve().parent.parent  # project root (ThreadEye/)
+ROOT = Path(__file__).resolve().parent  # project root (ThreadEye/)
 RAW_DIR = ROOT / "data" / "raw"
 PROCESSED_DIR = ROOT / "data" / "processed"
 
@@ -42,13 +42,25 @@ VALID_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 MIN_POLYGON_POINTS = 3
 
 # ------------------ Helper Function : to avoid file name errors ----------------------------------------------------------------------
+ 
+ 
 def find_file_case_insensitive(folder: Path, stem: str) -> Path | None:
-    """Find a file in `folder` matching `stem` regardless of extension/case."""
+    """
+    Find a mask file in `folder` matching `stem`, regardless of extension/case.
+    AITEX mask files are named like "<defect_stem>_mask.png", so we look
+    for that pattern first, then fall back to an exact stem match.
+    """
     if not folder.exists():
         return None
+ 
+    candidates = [f"{stem}_mask", stem]  # try "_mask" suffix first
+ 
     for f in folder.iterdir():
-        if f.is_file() and f.stem.lower() == stem.lower() and f.suffix.lower() in VALID_EXTENSIONS:
-            return f
+        if not f.is_file() or f.suffix.lower() not in VALID_EXTENSIONS:
+            continue
+        for candidate in candidates:
+            if f.stem.lower() == candidate.lower():
+                return f
     return None
 
 # ---------------------------------------- Converting Mask Images to YOLO Format ------------------------------------------------------------
@@ -147,25 +159,35 @@ def process_defect_images(class_id: int, min_area: int, epsilon_factor: float) -
 # NODefect_images ki har image ko copy karta hai, aur uske liye ek empty .txt file banata hai (matlab: "is image mein koi defect nahi hai" YOLO ko ye batana zaroori hai, taake wo clean fabric bhi pehchanna seekhe).
 
 def process_nodefect_images() -> int:
-    """Copy no-defect images and create empty label files."""
+    """
+    Copy no-defect images and create empty label files.
+    NODefect_images may contain images directly inside sub-folders
+    (e.g. NODefect_images/2306881-210020u/0001_000_05.png), so we
+    search recursively rather than assuming a flat folder.
+    """
     if not NODEFECT_IMG_DIR.exists():
         print(f"WARNING: NoDefect folder not found: {NODEFECT_IMG_DIR} (skipping)")
         return 0
-
+ 
     count = 0
-    for img_path in sorted(NODEFECT_IMG_DIR.iterdir()):
-        if img_path.suffix.lower() not in VALID_EXTENSIONS:
+    # rglob searches this folder AND all sub-folders
+    for img_path in sorted(NODEFECT_IMG_DIR.rglob("*")):
+        if not img_path.is_file() or img_path.suffix.lower() not in VALID_EXTENSIONS:
             continue
-
+ 
         dest_img = OUT_IMG_DIR / img_path.name
+        if dest_img.exists():
+            print(f"WARNING: Duplicate filename skipped: {img_path.name}")
+            continue
+ 
         shutil.copy2(img_path, dest_img)
-
+ 
         # Empty label file = "no objects in this image" for YOLO
         label_path = OUT_LABEL_DIR / (img_path.stem + ".txt")
         label_path.write_text("")
-
+ 
         count += 1
-
+ 
     return count
 
 
