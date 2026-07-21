@@ -21,6 +21,8 @@ data/processed/
 # Trained models (large binary files - track separately if needed)
 models/*.pt
 !models/.gitkeep
+yolov8n-seg.pt
+yolov8n.pt
 
 
 # Environment variables / secrets

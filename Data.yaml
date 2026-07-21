@@ -1,8 +1,13 @@
 
+
 # This file tells YOLO where to find the dataset and what classes exist.
+#
+# NOTE: We use an ABSOLUTE path here (not relative) because Ultralytics
+# resolves relative paths against its own global "datasets" folder
+# instead of this file's location, which causes wrong paths on Windows.
 
 # path: the base folder (everything below is relative to this)
-path: data/dataset
+path: D:/Projects/Data Science/ThreadEye/data/dataset
 
 # Sub-folders for each split (relative to 'path' above)
 train: images/train
