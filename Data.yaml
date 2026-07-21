@@ -1,0 +1,15 @@
+
+# This file tells YOLO where to find the dataset and what classes exist.
+
+# path: the base folder (everything below is relative to this)
+path: data/dataset
+
+# Sub-folders for each split (relative to 'path' above)
+train: images/train
+val: images/val
+test: images/test
+
+# Class names - index 0 is "defect" since we treated all defect types
+# as a single generic class during data_prep.
+names:
+  0: defect
