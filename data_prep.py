@@ -1,6 +1,5 @@
 """
 
-ThreadEye - Fabric Defect Detection (Segmentation version)
 Converts AITEX-style mask images into YOLO-SEGMENTATION format labels
 (polygon points instead of bounding boxes).
 
@@ -19,13 +18,15 @@ Usage:
 """
 
 import argparse
-import shutil #  this library is used to copy the files
+import shutil
 from pathlib import Path
 
 import cv2
 
-# ------------------------------------------------------------- Paths ---------------------------------------------------------------------
-ROOT = Path(__file__).resolve().parent  # project root (ThreadEye/)
+
+# Paths (adjust ROOT if your folder structure differs)
+
+ROOT = Path(__file__).resolve().parent  
 RAW_DIR = ROOT / "data" / "raw"
 PROCESSED_DIR = ROOT / "data" / "processed"
 
@@ -41,9 +42,7 @@ VALID_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 # Minimum points a polygon needs to be a valid shape for YOLO-seg
 MIN_POLYGON_POINTS = 3
 
-# ------------------ Helper Function : to avoid file name errors ----------------------------------------------------------------------
- 
- 
+
 def find_file_case_insensitive(folder: Path, stem: str) -> Path | None:
     """
     Find a mask file in `folder` matching `stem`, regardless of extension/case.
@@ -52,9 +51,9 @@ def find_file_case_insensitive(folder: Path, stem: str) -> Path | None:
     """
     if not folder.exists():
         return None
- 
+
     candidates = [f"{stem}_mask", stem]  # try "_mask" suffix first
- 
+
     for f in folder.iterdir():
         if not f.is_file() or f.suffix.lower() not in VALID_EXTENSIONS:
             continue
@@ -63,7 +62,7 @@ def find_file_case_insensitive(folder: Path, stem: str) -> Path | None:
                 return f
     return None
 
-# ---------------------------------------- Converting Mask Images to YOLO Format ------------------------------------------------------------
+
 def mask_to_yolo_seg_lines(
     mask_path: Path, class_id: int, min_area: int, epsilon_factor: float
 ) -> list[str]:
@@ -82,12 +81,16 @@ def mask_to_yolo_seg_lines(
 
     h_img, w_img = mask.shape
 
-    # Threshold to ensure a clean binary mask
-    _, thresh = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
-    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  # Find out the outline of white shapes
+    # Threshold to ensure a clean binary mask.
+    # NOTE: AITEX masks are NOT pure black/white - they use a range of
+    # grayscale intensities (anti-aliased edges). Using a low threshold
+    # (10, not 127) means "any pixel that isn't essentially black counts
+    # as defect" - this captures the full defect area instead of missing
+    # low-intensity defect pixels.
+    _, thresh = cv2.threshold(mask, 10, 255, cv2.THRESH_BINARY)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     lines = []
-   
     for cnt in contours:
         area = cv2.contourArea(cnt)
         if area < min_area:
@@ -111,16 +114,6 @@ def mask_to_yolo_seg_lines(
         lines.append(f"{class_id} " + " ".join(coords))
 
     return lines
-
-
-# Ye function sab defect images pe loop chalata hai aur har ek ke liye:
-
-# Uska matching mask dhoondta hai
-# Mask ko polygon lines mein convert karta hai (upar wala function call kar ke)
-# Image ko data/processed/images/ mein copy karta hai
-# Polygon lines ko .txt file mein save karta hai
-
-# Agar koi mask nahi milta, wo image skip ho jati hai (aur counter mein record hota hai kitni skip hui).
 
 
 def process_defect_images(class_id: int, min_area: int, epsilon_factor: float) -> tuple[int, int]:
@@ -156,8 +149,6 @@ def process_defect_images(class_id: int, min_area: int, epsilon_factor: float) -
     return processed, skipped
 
 
-# NODefect_images ki har image ko copy karta hai, aur uske liye ek empty .txt file banata hai (matlab: "is image mein koi defect nahi hai" YOLO ko ye batana zaroori hai, taake wo clean fabric bhi pehchanna seekhe).
-
 def process_nodefect_images() -> int:
     """
     Copy no-defect images and create empty label files.
@@ -168,26 +159,26 @@ def process_nodefect_images() -> int:
     if not NODEFECT_IMG_DIR.exists():
         print(f"WARNING: NoDefect folder not found: {NODEFECT_IMG_DIR} (skipping)")
         return 0
- 
+
     count = 0
     # rglob searches this folder AND all sub-folders
     for img_path in sorted(NODEFECT_IMG_DIR.rglob("*")):
         if not img_path.is_file() or img_path.suffix.lower() not in VALID_EXTENSIONS:
             continue
- 
+
         dest_img = OUT_IMG_DIR / img_path.name
         if dest_img.exists():
             print(f"WARNING: Duplicate filename skipped: {img_path.name}")
             continue
- 
+
         shutil.copy2(img_path, dest_img)
- 
+
         # Empty label file = "no objects in this image" for YOLO
         label_path = OUT_LABEL_DIR / (img_path.stem + ".txt")
         label_path.write_text("")
- 
+
         count += 1
- 
+
     return count
 
 
