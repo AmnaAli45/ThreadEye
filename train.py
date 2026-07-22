@@ -68,7 +68,8 @@ def main():
         imgsz=IMAGE_SIZE,
         batch=BATCH_SIZE,
         patience=PATIENCE,
-        device=0,                 # use the GPU
+        device=0,  # use the GPU
+        rect=True,      
         project="runs",           # where results get saved
         name=RUN_NAME,            # subfolder name for this run
         exist_ok=True,            # allow re-running without error

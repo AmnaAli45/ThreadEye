@@ -21,7 +21,7 @@ verbose: true
 seed: 0
 deterministic: true
 single_cls: false
-rect: false
+rect: true
 cos_lr: false
 close_mosaic: 10
 resume: false
