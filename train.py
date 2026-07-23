@@ -69,7 +69,8 @@ def main():
         batch=BATCH_SIZE,
         patience=PATIENCE,
         device=0,  # use the GPU
-        rect=True,      
+        rect=True,
+              
         project="runs",           # where results get saved
         name=RUN_NAME,            # subfolder name for this run
         exist_ok=True,            # allow re-running without error

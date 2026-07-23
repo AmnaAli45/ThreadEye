@@ -42,12 +42,12 @@ import cv2
 
 
 TILE_WIDTH = 512        # width of each tile in pixels
-STRIDE = 384            # how far we move before cutting the next tile
+STRIDE = 256            # how far we move before cutting the next tile
                          # (smaller than TILE_WIDTH = overlapping tiles,
                          #  which helps avoid cutting a defect exactly at
                          #  a tile boundary)
 
-MIN_DEFECT_AREA = 4     # minimum defect area (pixels) in a tile to count as "has defect"
+MIN_DEFECT_AREA = 12    # minimum defect area (pixels) in a tile to count as "has defect"
 MASK_THRESHOLD = 10     # same reasoning as before: AITEX masks use varying
                          # gray intensities, so we treat anything above this
                          # low value as "defect"
@@ -55,6 +55,12 @@ EPSILON_FACTOR = 0.01   # polygon simplification factor
 
 NODEFECT_TILE_RATIO = 1.0  # how many no-defect tiles to keep, relative to
                             # the number of defect tiles found (1.0 = same amount)
+
+EDGE_TRIM = 40           # pixels to cut off the left and right ends of each
+                          # source image before tiling. Fabric roll images
+                          # often have sensor/calibration artifacts right at
+                          # the very start and end, which can be mistaken
+                          # for defects - trimming avoids that.
 
 RANDOM_SEED = 42
 
@@ -173,6 +179,12 @@ def process_defect_images():
         img_h, img_w = mask.shape[:2]
         tile_height = img_h  # keep full height, we only tile along width
 
+        # Trim sensor/roll-edge artifacts from both ends before tiling
+        trim = min(EDGE_TRIM, img_w // 4)  # safety: never trim more than 1/4 of the image
+        image = image[:, trim: img_w - trim]
+        mask = mask[:, trim: img_w - trim]
+        img_w = image.shape[1]
+
         x_positions = get_tile_x_positions(img_w, TILE_WIDTH, STRIDE)
 
         for tile_idx, x_start in enumerate(x_positions):
@@ -222,7 +234,11 @@ def process_nodefect_images(target_tile_count):
             continue
 
         img_h, img_w = probe.shape[:2]
-        x_positions = get_tile_x_positions(img_w, TILE_WIDTH, STRIDE)
+        trim = min(EDGE_TRIM, img_w // 4)
+        img_w_trimmed = img_w - (2 * trim)
+        x_positions = get_tile_x_positions(img_w_trimmed, TILE_WIDTH, STRIDE)
+        # shift positions to account for the trimmed-off left edge
+        x_positions = [x + trim for x in x_positions]
 
         for x_start in x_positions:
             all_candidate_tiles.append((img_path, x_start))
