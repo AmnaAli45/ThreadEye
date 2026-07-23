@@ -18,7 +18,7 @@ from ultralytics import YOLO
 ROOT = Path(__file__).resolve().parent
 MODEL_PATH = ROOT / "models" / "threadeye_v1.pt"
 OUTPUT_DIR = ROOT / "outputs"
-CONFIDENCE_THRESHOLD = 0.25  # only show predictions the model is at least this sure about
+CONFIDENCE_THRESHOLD = 0.10  # only show predictions the model is at least this sure about
 
 
 def main():
