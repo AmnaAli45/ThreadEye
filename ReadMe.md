@@ -154,7 +154,7 @@ streamlit run app.py
 - [ ] Pilot with real mill fabric samples
 - [ ] Fine-tune on real data, improve precision/recall
 - [ ] Defect-type classification (holes, stains, broken yarn, etc.)
-- [ ] Deployment for continuous/live inspection
+- [ ] Deployment for continuous/live inspection..
 
 ---
 
